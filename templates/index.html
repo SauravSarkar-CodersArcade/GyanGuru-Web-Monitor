@@ -1,152 +1,600 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Gyan Guru Website Monitor</title>-->
+<!--    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">-->
+<!--    <script>-->
+<!--    function toggleDarkMode() {-->
+<!--      document.body.classList.toggle('dark-mode');-->
+<!--    }-->
+
+<!--    function filterCategory(select) {-->
+<!--      const selected = select.value.toLowerCase();-->
+<!--      document.querySelectorAll("tbody tr").forEach(row => {-->
+<!--        const cat = row.getAttribute("data-category");-->
+<!--        row.style.display = (selected === "all" || cat === selected) ? "" : "none";-->
+<!--      });-->
+<!--    }-->
+
+<!--    function showHistory(index) {-->
+<!--      fetch(`/updates/${index}`)-->
+<!--        .then(res => res.json())-->
+<!--        .then(history => {-->
+<!--          const modal = document.getElementById("historyModal");-->
+<!--          const container = document.getElementById("historyContent");-->
+<!--          container.innerHTML = "";-->
+<!--          if (history.length === 0) {-->
+<!--            container.innerHTML = "<p>No update history available.</p>";-->
+<!--          } else {-->
+<!--            history.forEach((item, i) => {-->
+<!--              const div = document.createElement("div");-->
+<!--              div.className = "history-entry";-->
+<!--              div.innerHTML = `-->
+<!--                <strong>Version ${i + 1}</strong> - <em>${item.timestamp}</em>-->
+<!--                <pre>${item.content}</pre>-->
+<!--                <hr>-->
+<!--              `;-->
+<!--              container.appendChild(div);-->
+<!--            });-->
+<!--          }-->
+<!--          modal.style.display = "block";-->
+<!--        });-->
+<!--    }-->
+
+<!--    function closeModal() {-->
+<!--      document.getElementById("historyModal").style.display = "none";-->
+<!--    }-->
+
+<!--    function resetAll() {-->
+<!--      if (confirm("Are you sure you want to reset all site tracking data?")) {-->
+<!--        fetch("/reset_all", { method: "POST" })-->
+<!--          .then(res => res.json())-->
+<!--          .then(data => {-->
+<!--            if (data.status === "reset") {-->
+<!--              alert("All sites have been reset.");-->
+<!--              location.reload();-->
+<!--            } else {-->
+<!--              alert("Reset failed.");-->
+<!--            }-->
+<!--          });-->
+<!--      }-->
+<!--    }-->
+
+<!--    window.onclick = function(event) {-->
+<!--      const modal = document.getElementById("historyModal");-->
+<!--      if (event.target === modal) modal.style.display = "none";-->
+<!--    };-->
+<!--      setInterval(() => {-->
+<!--  fetch("/table-data")-->
+<!--    .then(res => res.text())-->
+<!--    .then(html => {-->
+<!--      document.querySelector("tbody").innerHTML = html;-->
+<!--    });-->
+<!--}, 60000); // Every 60 seconds-->
+
+<!--    </script>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--&lt;!&ndash; ✅ HEADER WITH LOGO LEFT AND CENTERED TITLE &ndash;&gt;-->
+<!--<div class="header-container">-->
+<!--    <img src="{{ url_for('static', filename='gyan-guru.png') }}" alt="Gyan Guru Logo" class="logo">-->
+<!--    <h1>🧠 Gyan Guru Website Monitor</h1>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; ✅ TOP BAR: Add Site + Category + Dark Mode + Reset All &ndash;&gt;-->
+<!--<div class="top-bar">-->
+<!--    <form action="/add" method="POST" class="form-inline">-->
+<!--        <input name="name" placeholder="Website Name" required>-->
+<!--        <input name="url" placeholder="URL" required>-->
+<!--        <input name="selector" placeholder="CSS Selector" required>-->
+<!--        <input name="category" placeholder="Category" required>-->
+<!--        <button type="submit">➕ Add Site</button>-->
+<!--    </form>-->
+
+<!--    <div class="top-controls">-->
+<!--        <label>Category:</label>-->
+<!--        <select onchange="filterCategory(this)">-->
+<!--            <option value="all">All</option>-->
+<!--            {% for cat in categories %}-->
+<!--            <option value="{{ cat }}">{{ cat }}</option>-->
+<!--            {% endfor %}-->
+<!--        </select>-->
+
+<!--        <button onclick="toggleDarkMode()">🌓 Dark Mode</button>-->
+<!--        <button class="reset-button" onclick="resetAll()">🔁 Reset All</button>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; ✅ MONITORING TABLE &ndash;&gt;-->
+<!--<table>-->
+<!--    <thead>-->
+<!--    <tr>-->
+<!--        <th>Website</th>-->
+<!--        <th>Category</th>-->
+<!--        <th>URL</th>-->
+<!--        <th>Updates</th>-->
+<!--        <th>Status</th>-->
+<!--        <th>Last Checked</th>-->
+<!--        <th>Actions</th>-->
+<!--    </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--    {% for site in urls %}-->
+<!--    <tr data-category="{{ site.category.lower() }}">-->
+<!--        <td>{{ site.name }}</td>-->
+<!--        <td>{{ site.category }}</td>-->
+<!--        <td><a href="{{ site.url }}" target="_blank">🔗 Visit</a></td>-->
+<!--        <td>-->
+<!--          <span class="badge {{ 'highlight' if site.update_count > 0 and not site.acknowledged else '' }}">-->
+<!--            {{ site.update_count }}-->
+<!--          </span>-->
+<!--        </td>-->
+<!--        <td>{{ "⏸️ Paused" if site.paused else "✅ Active" }}</td>-->
+<!--        <td>{{ site.last_checked if site.last_checked else '—' }}</td>-->
+<!--        <td>-->
+<!--            <a href="/acknowledge/{{ loop.index0 }}">✅</a>-->
+<!--            <a href="/pause/{{ loop.index0 }}">⏯️</a>-->
+<!--            <a href="/reset/{{ loop.index0 }}">♻️</a>-->
+<!--            <a href="/remove/{{ loop.index0 }}">🗑️</a>-->
+<!--            <button onclick="showHistory({{ loop.index0 }})">📜 View History</button>-->
+<!--        </td>-->
+<!--    </tr>-->
+<!--    {% endfor %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<!--&lt;!&ndash; ✅ UPDATE HISTORY MODAL &ndash;&gt;-->
+<!--<div id="historyModal" class="modal">-->
+<!--    <div class="modal-content">-->
+<!--        <span class="close" onclick="closeModal()">×</span>-->
+<!--        <h2>🔍 Update History</h2>-->
+<!--        <div id="historyContent"></div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <title>Gyan Guru Website Monitor</title>-->
+<!--  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">-->
+<!--  <script>-->
+<!--    // ✅ Toggle + persist dark mode-->
+<!--    function toggleDarkMode() {-->
+<!--      const isDark = document.body.classList.toggle('dark-mode');-->
+<!--      localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');-->
+<!--    }-->
+
+<!--    // ✅ Load dark mode from localStorage-->
+<!--    window.onload = function() {-->
+<!--      if (localStorage.getItem('darkMode') === 'enabled') {-->
+<!--        document.body.classList.add('dark-mode');-->
+<!--      }-->
+<!--    };-->
+
+<!--    function filterCategory(select) {-->
+<!--      const selected = select.value.toLowerCase();-->
+<!--      document.querySelectorAll("tbody tr").forEach(row => {-->
+<!--        const cat = row.getAttribute("data-category");-->
+<!--        row.style.display = (selected === "all" || cat === selected) ? "" : "none";-->
+<!--      });-->
+<!--    }-->
+
+<!--    function showHistory(index) {-->
+<!--      fetch(`/updates/${index}`)-->
+<!--        .then(res => res.json())-->
+<!--        .then(history => {-->
+<!--          const modal = document.getElementById("historyModal");-->
+<!--          const container = document.getElementById("historyContent");-->
+<!--          container.innerHTML = "";-->
+<!--          if (history.length === 0) {-->
+<!--            container.innerHTML = "<p>No update history available.</p>";-->
+<!--          } else {-->
+<!--            history.forEach((item, i) => {-->
+<!--              const div = document.createElement("div");-->
+<!--              div.className = "history-entry";-->
+<!--              div.innerHTML = `-->
+<!--                <strong>Version ${i + 1}</strong> - <em>${item.timestamp}</em>-->
+<!--                <pre>${item.content}</pre>-->
+<!--                <hr>-->
+<!--              `;-->
+<!--              container.appendChild(div);-->
+<!--            });-->
+<!--          }-->
+<!--          modal.style.display = "block";-->
+<!--        });-->
+<!--    }-->
+
+<!--    function closeModal() {-->
+<!--      document.getElementById("historyModal").style.display = "none";-->
+<!--    }-->
+
+<!--    function resetAll() {-->
+<!--      if (confirm("Are you sure you want to reset all site tracking data?")) {-->
+<!--        fetch("/reset_all", { method: "POST" })-->
+<!--          .then(res => res.json())-->
+<!--          .then(data => {-->
+<!--            if (data.status === "reset") {-->
+<!--              alert("All sites have been reset.");-->
+<!--              location.reload();-->
+<!--            } else {-->
+<!--              alert("Reset failed.");-->
+<!--            }-->
+<!--          });-->
+<!--      }-->
+<!--    }-->
+
+<!--    window.onclick = function(event) {-->
+<!--      const modal = document.getElementById("historyModal");-->
+<!--      if (event.target === modal) modal.style.display = "none";-->
+<!--    };-->
+
+<!--    // ✅ Auto-refresh table body every 60s-->
+<!--    setInterval(() => {-->
+<!--      fetch("/table-data")-->
+<!--        .then(res => res.text())-->
+<!--        .then(html => {-->
+<!--          document.querySelector("tbody").innerHTML = html;-->
+<!--        });-->
+<!--    }, 60000);-->
+<!--  </script>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--&lt;!&ndash; ✅ HEADER WITH LOGO LEFT AND CENTERED TITLE &ndash;&gt;-->
+<!--<div class="header-container">-->
+<!--  <img src="{{ url_for('static', filename='gyan-guru.png') }}" alt="Gyan Guru Logo" class="logo">-->
+<!--  <h1>🧠 Gyan Guru Website Monitor</h1>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; ✅ TOP BAR: Add Site + Category + Dark Mode + Reset All &ndash;&gt;-->
+<!--<div class="top-bar">-->
+<!--  <form action="/add" method="POST" class="form-inline">-->
+<!--    <input name="name" placeholder="Website Name" required>-->
+<!--    <input name="url" placeholder="URL" required>-->
+<!--    <input name="selector" placeholder="CSS Selector" required>-->
+<!--    <input name="category" placeholder="Category" required>-->
+<!--    <button type="submit">➕ Add Site</button>-->
+<!--  </form>-->
+
+<!--  <div class="top-controls">-->
+<!--    <label>Category:</label>-->
+<!--    <select onchange="filterCategory(this)">-->
+<!--      <option value="all">All</option>-->
+<!--      {% for cat in categories %}-->
+<!--      <option value="{{ cat }}">{{ cat }}</option>-->
+<!--      {% endfor %}-->
+<!--    </select>-->
+
+<!--    <button onclick="toggleDarkMode()">🌓 Dark Mode</button>-->
+<!--    <button class="reset-button" onclick="resetAll()">🔁 Reset All</button>-->
+<!--  </div>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; ✅ MONITORING TABLE &ndash;&gt;-->
+<!--<table>-->
+<!--  <thead>-->
+<!--    <tr>-->
+<!--      <th>Website</th>-->
+<!--      <th>Category</th>-->
+<!--      <th>URL</th>-->
+<!--      <th>Updates</th>-->
+<!--      <th>Status</th>-->
+<!--      <th>Last Checked</th>-->
+<!--      <th>Actions</th>-->
+<!--    </tr>-->
+<!--  </thead>-->
+<!--  <tbody>-->
+<!--    {% include 'table_body.html' %}-->
+<!--  </tbody>-->
+<!--</table>-->
+
+<!--&lt;!&ndash; ✅ UPDATE HISTORY MODAL &ndash;&gt;-->
+<!--<div id="historyModal" class="modal">-->
+<!--  <div class="modal-content">-->
+<!--    <span class="close" onclick="closeModal()">×</span>-->
+<!--    <h2>🔍 Update History</h2>-->
+<!--    <div id="historyContent"></div>-->
+<!--  </div>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8">-->
+<!--    <title>Gyan Guru Website Monitor</title>-->
+<!--    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">-->
+<!--    <script>-->
+<!--    function toggleDarkMode() {-->
+<!--      const isDark = document.body.classList.toggle('dark-mode');-->
+<!--      localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');-->
+<!--    }-->
+
+<!--    window.onload = function() {-->
+<!--      if (localStorage.getItem('darkMode') === 'enabled') {-->
+<!--        document.body.classList.add('dark-mode');-->
+<!--      }-->
+<!--    };-->
+
+<!--    function filterCategory(select) {-->
+<!--      const selected = select.value.toLowerCase();-->
+<!--      document.querySelectorAll("tbody tr").forEach(row => {-->
+<!--        const cat = row.getAttribute("data-category");-->
+<!--        row.style.display = (selected === "all" || cat === selected) ? "" : "none";-->
+<!--      });-->
+<!--    }-->
+
+<!--    function showHistory(index) {-->
+<!--      fetch(`/updates/${index}`)-->
+<!--        .then(res => res.json())-->
+<!--        .then(history => {-->
+<!--          const modal = document.getElementById("historyModal");-->
+<!--          const container = document.getElementById("historyContent");-->
+<!--          container.innerHTML = "";-->
+<!--          if (history.length === 0) {-->
+<!--            container.innerHTML = "<p>No update history available.</p>";-->
+<!--          } else {-->
+<!--            history.forEach((item, i) => {-->
+<!--              const div = document.createElement("div");-->
+<!--              div.className = "history-entry";-->
+<!--              div.innerHTML = `-->
+<!--                <strong>Version ${i + 1}</strong> - <em>${item.timestamp}</em>-->
+<!--                <pre>${item.content}</pre>-->
+<!--                <hr>-->
+<!--              `;-->
+<!--              container.appendChild(div);-->
+<!--            });-->
+<!--          }-->
+<!--          modal.style.display = "block";-->
+<!--        });-->
+<!--    }-->
+
+<!--    function closeModal() {-->
+<!--      document.getElementById("historyModal").style.display = "none";-->
+<!--    }-->
+
+<!--    function resetAll() {-->
+<!--      if (confirm("Are you sure you want to reset all site tracking data?")) {-->
+<!--        fetch("/reset_all", { method: "POST" })-->
+<!--          .then(res => res.json())-->
+<!--          .then(data => {-->
+<!--            if (data.status === "reset") {-->
+<!--              alert("All sites have been reset.");-->
+<!--              location.reload();-->
+<!--            } else {-->
+<!--              alert("Reset failed.");-->
+<!--            }-->
+<!--          });-->
+<!--      }-->
+<!--    }-->
+
+<!--    window.onclick = function(event) {-->
+<!--      const modal = document.getElementById("historyModal");-->
+<!--      if (event.target === modal) modal.style.display = "none";-->
+<!--    };-->
+
+<!--    setInterval(() => {-->
+<!--      fetch("/table-data")-->
+<!--        .then(res => res.text())-->
+<!--        .then(html => {-->
+<!--          document.querySelector("tbody").innerHTML = html;-->
+<!--        });-->
+<!--    }, 60000);-->
+
+<!--    </script>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<div class="header-container">-->
+<!--    <img src="{{ url_for('static', filename='gyan-guru.png') }}" alt="Gyan Guru Logo" class="logo">-->
+<!--    <h1>🧠 Gyan Guru Website Monitor</h1>-->
+<!--</div>-->
+
+<!--<div class="top-bar">-->
+<!--    <form action="/add" method="POST" class="form-inline">-->
+<!--        <input name="name" placeholder="Website Name" required>-->
+<!--        <input name="url" placeholder="URL" required>-->
+<!--        <input name="selector" placeholder="CSS Selector" required>-->
+<!--        <input name="category" placeholder="Category" required>-->
+<!--        <button type="submit">➕ Add Site</button>-->
+<!--    </form>-->
+
+<!--    <div class="top-controls">-->
+<!--        <label>Category:</label>-->
+<!--        <select onchange="filterCategory(this)">-->
+<!--            <option value="all">All</option>-->
+<!--            {% for cat in categories %}-->
+<!--            <option value="{{ cat }}">{{ cat }}</option>-->
+<!--            {% endfor %}-->
+<!--        </select>-->
+
+<!--        <button onclick="toggleDarkMode()">🌓 Dark Mode</button>-->
+<!--        <button class="reset-button" onclick="resetAll()">🔁 Reset All</button>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--<table>-->
+<!--    <thead>-->
+<!--    <tr>-->
+<!--        <th>Website</th>-->
+<!--        <th>Category</th>-->
+<!--        <th>URL</th>-->
+<!--        <th>Updates</th>-->
+<!--        <th>Status</th>-->
+<!--        <th>Last Checked</th>-->
+<!--        <th>Actions</th>-->
+<!--    </tr>-->
+<!--    </thead>-->
+<!--    <tbody>-->
+<!--    {% include 'table_body.html' %}-->
+<!--    </tbody>-->
+<!--</table>-->
+
+<!--<div id="historyModal" class="modal">-->
+<!--    <div class="modal-content">-->
+<!--        <span class="close" onclick="closeModal()">×</span>-->
+<!--        <h2>🔍 Update History</h2>-->
+<!--        <div id="historyContent"></div>-->
+<!--    </div>-->
+<!--</div>-->
+
+<!--</body>-->
+<!--</html>-->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Website Monitor</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <title>Gyan Guru Website Monitor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    // ✅ Toggle + persist dark mode
+    function toggleDarkMode() {
+      const isDark = document.body.classList.toggle('dark-mode');
+      localStorage.setItem('darkMode', isDark ? 'enabled' : 'disabled');
+    }
+
+    // ✅ Load dark mode from localStorage
+    window.onload = function() {
+      if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+      }
+    };
+
+    function filterCategory(select) {
+      const selected = select.value.toLowerCase();
+      document.querySelectorAll("tbody tr").forEach(row => {
+        const cat = row.getAttribute("data-category");
+        row.style.display = (selected === "all" || cat === selected) ? "" : "none";
+      });
+    }
+
+    function showHistory(index) {
+      fetch(`/updates/${index}`)
+        .then(res => res.json())
+        .then(history => {
+          const modal = document.getElementById("historyModal");
+          const container = document.getElementById("historyContent");
+          container.innerHTML = "";
+          if (history.length === 0) {
+            container.innerHTML = "<p>No update history available.</p>";
+          } else {
+            history.forEach((item, i) => {
+              const div = document.createElement("div");
+              div.className = "history-entry";
+              div.innerHTML = `
+                <strong>Version ${i + 1}</strong> - <em>${item.timestamp}</em>
+                <pre>${item.content}</pre>
+                <hr>
+              `;
+              container.appendChild(div);
+            });
+          }
+          modal.style.display = "block";
+        });
+    }
+
+    function closeModal() {
+      document.getElementById("historyModal").style.display = "none";
+    }
+
+    function resetAll() {
+      if (confirm("Are you sure you want to reset all site tracking data?")) {
+        fetch("/reset_all", { method: "POST" })
+          .then(res => res.json())
+          .then(data => {
+            if (data.status === "reset") {
+              alert("All sites have been reset.");
+              location.reload();
+            } else {
+              alert("Reset failed.");
+            }
+          });
+      }
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById("historyModal");
+      if (event.target === modal) modal.style.display = "none";
+    };
+
+    // ✅ Auto-refresh table body every 60s
+    setInterval(() => {
+      fetch("/table-data")
+        .then(res => res.text())
+        .then(html => {
+          document.querySelector("tbody").innerHTML = html;
+        });
+    }, 60000);
+  </script>
 </head>
 <body>
+
+<!-- ✅ HEADER WITH LOGO LEFT AND CENTERED TITLE -->
 <div class="header-container">
-  <img src="/static/gyan-guru.png" alt="Logo" class="logo">
-  <h1>Gyan Guru State-Wise Admissions Update Monitor</h1>
+  <img src="{{ url_for('static', filename='gyan-guru.png') }}" alt="Gyan Guru Logo" class="logo">
+  <h1>🧠 Gyan Guru Website Monitor</h1>
 </div>
 
-<form id="addForm">
-    <input type="text" id="siteName" placeholder="Website Name" required>
-    <input type="url" id="siteURL" placeholder="Website URL" required>
-    <input type="text" id="siteSelector" placeholder="Optional CSS Selector">
-    <input type="text" id="siteCategory" placeholder="Category (e.g., Medical)">
-    <button type="submit">Add Website</button>
-</form>
+<!-- ✅ TOP BAR: Add Site + Category + Dark Mode + Reset All -->
+<div class="top-bar">
+  <form action="/add" method="POST" class="form-inline">
+    <input name="name" placeholder="Website Name" required>
+    <input name="url" placeholder="URL" required>
+    <input name="selector" placeholder="CSS Selector" required>
+    <input name="category" placeholder="Category" required>
+    <button type="submit">➕ Add Site</button>
+  </form>
 
-<div id="filterBar">
-    <label for="categoryFilter">Filter by Category:</label>
-    <select id="categoryFilter">
-        <option value="all">All</option>
+  <div class="top-controls">
+    <label>Category:</label>
+    <select onchange="filterCategory(this)">
+      <option value="all">All</option>
+      {% for cat in categories %}
+      <option value="{{ cat }}">{{ cat }}</option>
+      {% endfor %}
     </select>
+
+    <button onclick="toggleDarkMode()">🌓 Dark Mode</button>
+    <button class="reset-button" onclick="resetAll()">🔁 Reset All</button>
+  </div>
 </div>
 
-<!-- 🔁 Reset & Theme Toggle -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px;">
-    <button id="resetAll" style="background-color: #b30000; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;">🔁 Reset All</button>
-    <button id="toggleTheme">🌓 Toggle Theme</button>
-</div>
-
-<table id="statusTable">
-    <thead>
+<!-- ✅ MONITORING TABLE -->
+<table>
+  <thead>
     <tr>
-        <th>Website</th>
-        <th>Category</th>
-        <th>Status</th>
-        <th>Last Checked</th>
-        <th>Updates</th>
-        <th>Task</th>
+      <th>Website</th>
+      <th>Category</th>
+      <th>URL</th>
+      <th>Updates</th>
+      <th>Status</th>
+      <th>Last Checked</th>
+      <th>Actions</th>
     </tr>
-    </thead>
-    <tbody></tbody>
+  </thead>
+  <tbody>
+    {% include 'table_body.html' %}
+  </tbody>
 </table>
 
-<script>
-    let allSites = [];
+<!-- ✅ UPDATE HISTORY MODAL -->
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">×</span>
+    <h2>🔍 Update History</h2>
+    <div id="historyContent"></div>
+  </div>
+</div>
 
-    async function fetchStatus() {
-        const res = await fetch("/status");
-        const data = await res.json();
-        allSites = data;
-        populateCategoryDropdown(data);
-        renderTable();
-    }
-
-    function populateCategoryDropdown(sites) {
-        const select = document.getElementById("categoryFilter");
-        const categories = [...new Set(sites.map(s => s.category || "").filter(Boolean))];
-        select.innerHTML = `<option value="all">All</option>` + categories.map(c =>
-            `<option value="${c.toLowerCase()}">${c}</option>`).join("");
-    }
-
-    function renderTable() {
-        const tbody = document.querySelector("#statusTable tbody");
-        const selectedCategory = document.getElementById("categoryFilter").value;
-        tbody.innerHTML = "";
-
-        allSites.forEach(site => {
-            const updated = site.update_count > 0;
-            const paused = site.paused;
-            const siteCategory = site.category || "";
-            if (selectedCategory !== "all" && siteCategory.toLowerCase() !== selectedCategory.toLowerCase()) return;
-
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td><a href="${site.url}" target="_blank">${site.name}</a></td>
-                <td>${siteCategory}</td>
-                <td>${updated ? "🔔 <b>Updated</b>" : "✅ No Change"}</td>
-                <td>${site.last_checked}</td>
-                <td>${updated ? `<span class="update-badge">${site.update_count} <span class="pulse-bubble">NEW</span></span>` : "0"}</td>
-                <td class="task-grid">
-                    <button onclick="togglePause('${site.name}')" class="${paused ? '' : 'blinker'}">${paused ? "▶ Resume" : "⏸ Pause"}</button>
-                    ${updated ? `<button class="mark-seen" onclick="acknowledge('${site.name}')">✔ Mark Seen</button>` : `<span class="empty-cell"></span>`}
-                    <button class="danger" onclick="removeSite('${site.name}')">🗑 Remove</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
-
-    async function acknowledge(name) {
-        await fetch(`/acknowledge/${encodeURIComponent(name)}`, { method: "POST" });
-        fetchStatus();
-    }
-
-    async function removeSite(name) {
-        if (!confirm(`Are you sure you want to remove "${name}"?`)) return;
-        await fetch(`/remove/${encodeURIComponent(name)}`, { method: "POST" });
-        fetchStatus();
-    }
-
-    async function togglePause(name) {
-        await fetch(`/pause/${encodeURIComponent(name)}`, { method: "POST" });
-        fetchStatus();
-    }
-
-    document.getElementById("addForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const name = document.getElementById("siteName").value;
-        const url = document.getElementById("siteURL").value;
-        const selector = document.getElementById("siteSelector").value;
-        const category = document.getElementById("siteCategory").value;
-        await fetch("/add", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, url, selector, category })
-        });
-        document.getElementById("addForm").reset();
-        fetchStatus();
-    });
-
-    document.getElementById("categoryFilter").addEventListener("change", renderTable);
-
-    document.getElementById("toggleTheme").addEventListener("click", () => {
-        document.body.classList.toggle("dark");
-        localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
-    });
-
-    document.getElementById("resetAll").addEventListener("click", async () => {
-        if (confirm("Are you sure you want to reset all site tracking data?")) {
-            const res = await fetch("/reset_all", { method: "POST" });
-            const data = await res.json();
-            if (data.status === "reset") {
-                alert("All sites have been reset.");
-                fetchStatus();
-            } else {
-                alert("Reset failed.");
-            }
-        }
-    });
-
-    if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
-
-    fetchStatus();
-    setInterval(fetchStatus, 300000); // every 5 mins
-</script>
 </body>
 </html>

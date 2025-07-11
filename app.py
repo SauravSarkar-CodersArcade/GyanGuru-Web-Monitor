@@ -1,177 +1,186 @@
-# Latest
-from flask import Flask, render_template, jsonify, request
-import requests, hashlib, json, urllib3
+from flask import Flask, render_template, request, redirect, jsonify
 from bs4 import BeautifulSoup
 from datetime import datetime
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import json, hashlib, os, requests
+from flask_apscheduler import APScheduler  # ✅ Scheduler added
 
 app = Flask(__name__)
-URLS_FILE = "urls.json"
+scheduler = APScheduler()
+scheduler.api_enabled = True
 
-# Disable SSL warnings (not recommended in production)
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+URLS_FILE = 'urls.json'
+HEADERS = {'User-Agent': 'Mozilla/5.0'}
 
 
-# Load URLs from file
 def load_urls():
-    with open(URLS_FILE, "r") as f:
+    with open(URLS_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
-# Save URLs to file
 def save_urls(urls):
-    with open(URLS_FILE, "w") as f:
+    with open(URLS_FILE, 'w', encoding='utf-8') as f:
         json.dump(urls, f, indent=2)
 
 
-# Generate SHA256 hash
-def get_hash(content):
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
-# Extract FULL HTML content using selector
-# def extract_content(html, selector):
-#     soup = BeautifulSoup(html, "html.parser")
-#     element = soup.select_one(selector)
-#     return str(element) if element else ""
-
-def extract_content(html, selector):
-    soup = BeautifulSoup(html, "html.parser")
-    elements = soup.select(selector)
-    text = " ".join(el.get_text(strip=True) for el in elements)
-    return text
-
-
-
-# Retry-enabled requests session
 def get_session():
     session = requests.Session()
-    retries = Retry(
-        total=3,
-        backoff_factor=1,
-        status_forcelist=[500, 502, 503, 504],
-        raise_on_status=False
-    )
-    adapter = HTTPAdapter(max_retries=retries)
+    adapter = requests.adapters.HTTPAdapter(max_retries=3)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
     return session
 
 
-# Core logic to check updates
-def check_websites():
-    urls = load_urls()
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"
-    }
-    session = get_session()
+def get_hash(content):
+    return hashlib.sha256(content.encode('utf-8')).hexdigest()
 
-    for site in urls:
-        if site.get("paused"):
+
+def monitor_urls():
+    urls = load_urls()
+    session = get_session()
+    for entry in urls:
+        if entry.get("paused"):
             continue
         try:
-            response = session.get(site["url"], timeout=10, headers=headers, verify=False)
-            html = response.text
-            target = extract_content(html, site.get("selector")) if site.get("selector") else html
-            new_hash = get_hash(target)
-            # print(f"\n[{site['name']}] Extracted content:\n{target}\nHash: {new_hash}\nOld Hash: {site.get('last_hash')}\n")
+            res = session.get(entry["url"], headers=HEADERS, timeout=10)
+            soup = BeautifulSoup(res.content, 'html.parser')
+            selected = soup.select_one(entry["selector"])
+            if not selected:
+                continue
+            content = selected.decode_contents()
+            content_hash = get_hash(content)
 
-            if site.get("last_hash") and new_hash != site["last_hash"]:
-                site["updated"] = True
-                site["update_count"] = site.get("update_count", 0) + 1
-            else:
-                site["updated"] = False
+            if "hash_history" not in entry:
+                entry["hash_history"] = []
 
-            site["last_hash"] = new_hash
-            site["last_checked"] = datetime.now().strftime("%d %b, %I:%M %p")
+            if not any(h["hash"] == content_hash for h in entry["hash_history"]):
+                entry["hash_history"].append({
+                    "hash": content_hash,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "content": content
+                })
+                entry["update_count"] = entry.get("update_count", 0) + 1
+                entry["acknowledged"] = False
+
+            # ✅ Always update last checked
+            entry["last_checked"] = datetime.now().strftime("%d %b, %I:%M %p")
+
         except Exception as e:
-            site["updated"] = False
-            site["last_checked"] = "Error"
-            print(f"Error checking {site['name']}: {e}")
+            print(f"Error checking {entry['name']}: {e}")
     save_urls(urls)
 
 
-# Reset all metadata
-def reset_all_sites():
+@app.route('/')
+def index():
+    urls = load_urls()
+    categories = sorted(set(u.get("category", "Uncategorized").capitalize() for u in urls))
+    return render_template('index.html', urls=urls, categories=categories)
+
+
+@app.route('/add', methods=['POST'])
+def add():
+    urls = load_urls()
+    data = request.form
+    name = data['name']
+    url = data['url']
+    selector = data['selector']
+    category = data['category'].capitalize()
+
+    session = get_session()
+    try:
+        res = session.get(url, headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(res.content, 'html.parser')
+        selected = soup.select_one(selector)
+        if not selected:
+            return "Selector not found", 400
+        content = selected.decode_contents()
+        content_hash = get_hash(content)
+    except:
+        return "Failed to fetch URL or selector", 400
+
+    entry = {
+        "name": name,
+        "url": url,
+        "selector": selector,
+        "category": category,
+        "paused": False,
+        "update_count": 0,
+        "acknowledged": False,
+        "last_checked": datetime.now().strftime("%d %b, %I:%M %p"),
+        "hash_history": [{
+            "hash": content_hash,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "content": content
+        }]
+    }
+    urls.append(entry)
+    save_urls(urls)
+    return redirect('/')
+
+
+@app.route('/acknowledge/<int:index>')
+def acknowledge(index):
+    urls = load_urls()
+    urls[index]["acknowledged"] = True
+    urls[index]["update_count"] = 0  # ✅ Reset count on acknowledge
+    save_urls(urls)
+    return redirect('/')
+
+
+@app.route('/remove/<int:index>')
+def remove(index):
+    urls = load_urls()
+    urls.pop(index)
+    save_urls(urls)
+    return redirect('/')
+
+
+@app.route('/pause/<int:index>')
+def pause(index):
+    urls = load_urls()
+    urls[index]["paused"] = not urls[index].get("paused", False)
+    save_urls(urls)
+    return redirect('/')
+
+
+@app.route('/reset/<int:index>')
+def reset(index):
+    urls = load_urls()
+    urls[index]["update_count"] = 0
+    urls[index]["acknowledged"] = False
+    save_urls(urls)
+    return redirect('/')
+
+
+@app.route('/reset_all', methods=['POST'])
+def reset_all():
     urls = load_urls()
     for site in urls:
-        site["last_hash"] = ""
-        site["last_checked"] = ""
-        site["updated"] = False
         site["update_count"] = 0
-        site["updates"] = 0
-        site["hash"] = ""
-        site["last_change"] = ""
+        site["acknowledged"] = False
     save_urls(urls)
-
-
-# Routes
-
-@app.route("/reset_all", methods=["POST"])
-def reset_all():
-    reset_all_sites()
     return jsonify({"status": "reset"})
 
 
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-
-@app.route("/status")
-def status():
-    check_websites()
-    return jsonify(load_urls())
-
-
-@app.route("/add", methods=["POST"])
-def add_site():
-    data = request.get_json()
+@app.route('/updates/<int:index>')
+def get_updates(index):
     urls = load_urls()
-    urls.append({
-        "name": data["name"],
-        "url": data["url"],
-        "selector": data.get("selector", ""),
-        "category": data.get("category", ""),
-        "last_hash": "",
-        "last_checked": "",
-        "updated": False,
-        "update_count": 0,
-        "paused": False
-    })
-    save_urls(urls)
-    return jsonify({"status": "ok"})
+    return jsonify(urls[index].get("hash_history", []))
 
 
-@app.route("/acknowledge/<path:name>", methods=["POST"])
-def acknowledge(name):
+# ✅ Schedule background monitoring every 5 minutes
+@scheduler.task('interval', id='monitor_task', minutes=5)
+def scheduled_monitor():
+    print(f"[{datetime.now()}] ⏲️ Scheduled monitoring triggered.")
+    monitor_urls()
+
+
+@app.route('/table-data')
+def table_data():
     urls = load_urls()
-    for site in urls:
-        if site["name"] == name:
-            site["update_count"] = 0
-    save_urls(urls)
-    return jsonify({"status": "acknowledged"})
+    return render_template('table_body.html', urls=urls)
 
 
-@app.route("/remove/<path:name>", methods=["POST"])
-def remove_site(name):
-    urls = load_urls()
-    urls = [site for site in urls if site["name"] != name]
-    save_urls(urls)
-    return jsonify({"status": "removed"})
-
-
-@app.route("/pause/<path:name>", methods=["POST"])
-def toggle_pause(name):
-    urls = load_urls()
-    for site in urls:
-        if site["name"] == name:
-            site["paused"] = not site.get("paused", False)
-    save_urls(urls)
-    return jsonify({"status": "toggled"})
-
-
-# Start the app
-if __name__ == "__main__":
+if __name__ == '__main__':
+    scheduler.init_app(app)
+    scheduler.start()
     app.run(debug=True)
