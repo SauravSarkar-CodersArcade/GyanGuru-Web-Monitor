@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Website Monitor</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="header-container">
+  <img src="/static/gyan-guru.png" alt="Logo" class="logo">
+  <h1>Gyan Guru State-Wise Admissions Update Monitor</h1>
+</div>
+
+<form id="addForm">
+    <input type="text" id="siteName" placeholder="Website Name" required>
+    <input type="url" id="siteURL" placeholder="Website URL" required>
+    <input type="text" id="siteSelector" placeholder="Optional CSS Selector">
+    <input type="text" id="siteCategory" placeholder="Category (e.g., Medical)">
+    <button type="submit">Add Website</button>
+</form>
+
+<div id="filterBar">
+    <label for="categoryFilter">Filter by Category:</label>
+    <select id="categoryFilter">
+        <option value="all">All</option>
+    </select>
+</div>
+
+<!-- 🔁 Reset & Theme Toggle -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px;">
+    <button id="resetAll" style="background-color: #b30000; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer;">🔁 Reset All</button>
+    <button id="toggleTheme">🌓 Toggle Theme</button>
+</div>
+
+<table id="statusTable">
+    <thead>
+    <tr>
+        <th>Website</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Last Checked</th>
+        <th>Updates</th>
+        <th>Task</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    let allSites = [];
+
+    async function fetchStatus() {
+        const res = await fetch("/status");
+        const data = await res.json();
+        allSites = data;
+        populateCategoryDropdown(data);
+        renderTable();
+    }
+
+    function populateCategoryDropdown(sites) {
+        const select = document.getElementById("categoryFilter");
+        const categories = [...new Set(sites.map(s => s.category || "").filter(Boolean))];
+        select.innerHTML = `<option value="all">All</option>` + categories.map(c =>
+            `<option value="${c.toLowerCase()}">${c}</option>`).join("");
+    }
+
+    function renderTable() {
+        const tbody = document.querySelector("#statusTable tbody");
+        const selectedCategory = document.getElementById("categoryFilter").value;
+        tbody.innerHTML = "";
+
+        allSites.forEach(site => {
+            const updated = site.update_count > 0;
+            const paused = site.paused;
+            const siteCategory = site.category || "";
+            if (selectedCategory !== "all" && siteCategory.toLowerCase() !== selectedCategory.toLowerCase()) return;
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><a href="${site.url}" target="_blank">${site.name}</a></td>
+                <td>${siteCategory}</td>
+                <td>${updated ? "🔔 <b>Updated</b>" : "✅ No Change"}</td>
+                <td>${site.last_checked}</td>
+                <td>${updated ? `<span class="update-badge">${site.update_count} <span class="pulse-bubble">NEW</span></span>` : "0"}</td>
+                <td class="task-grid">
+                    <button onclick="togglePause('${site.name}')" class="${paused ? '' : 'blinker'}">${paused ? "▶ Resume" : "⏸ Pause"}</button>
+                    ${updated ? `<button class="mark-seen" onclick="acknowledge('${site.name}')">✔ Mark Seen</button>` : `<span class="empty-cell"></span>`}
+                    <button class="danger" onclick="removeSite('${site.name}')">🗑 Remove</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    async function acknowledge(name) {
+        await fetch(`/acknowledge/${encodeURIComponent(name)}`, { method: "POST" });
+        fetchStatus();
+    }
+
+    async function removeSite(name) {
+        if (!confirm(`Are you sure you want to remove "${name}"?`)) return;
+        await fetch(`/remove/${encodeURIComponent(name)}`, { method: "POST" });
+        fetchStatus();
+    }
+
+    async function togglePause(name) {
+        await fetch(`/pause/${encodeURIComponent(name)}`, { method: "POST" });
+        fetchStatus();
+    }
+
+    document.getElementById("addForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = document.getElementById("siteName").value;
+        const url = document.getElementById("siteURL").value;
+        const selector = document.getElementById("siteSelector").value;
+        const category = document.getElementById("siteCategory").value;
+        await fetch("/add", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, url, selector, category })
+        });
+        document.getElementById("addForm").reset();
+        fetchStatus();
+    });
+
+    document.getElementById("categoryFilter").addEventListener("change", renderTable);
+
+    document.getElementById("toggleTheme").addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    });
+
+    document.getElementById("resetAll").addEventListener("click", async () => {
+        if (confirm("Are you sure you want to reset all site tracking data?")) {
+            const res = await fetch("/reset_all", { method: "POST" });
+            const data = await res.json();
+            if (data.status === "reset") {
+                alert("All sites have been reset.");
+                fetchStatus();
+            } else {
+                alert("Reset failed.");
+            }
+        }
+    });
+
+    if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
+
+    fetchStatus();
+    setInterval(fetchStatus, 300000); // every 5 mins
+</script>
+</body>
+</html>
