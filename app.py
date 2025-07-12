@@ -178,9 +178,12 @@ def scheduled_monitor():
 def table_data():
     urls = load_urls()
     return render_template('table_body.html', urls=urls)
+    # return render_template('table_body.html', urls=urls), 200, {'Content-Type': 'text/html'}
 
 
 if __name__ == '__main__':
     scheduler.init_app(app)
     scheduler.start()
     app.run(debug=True)
+
+

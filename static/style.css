@@ -20,7 +20,7 @@ h1 {
 }
 
 .logo {
-  max-width: 120px;
+  max-width: 160px;
   position: absolute;
   left: 0;
 }
@@ -229,3 +229,31 @@ a {
 .reset-button:hover {
   background-color: #c62828 !important;
 }
+
+/*  Latest Addition  */
+
+/* Existing styles remain unchanged above */
+
+/* 📌 Default unpinned pin button */
+.pin-btn {
+  background-color: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #c0392b; /* muted red */
+  transition: transform 0.2s, color 0.2s;
+}
+
+/* 📌 Pinned pin button – visually stronger */
+.pin-btn.pinned {
+  color: #e74c3c;           /* brighter red */
+  font-size: 22px;          /* larger */
+  transform: scale(1.2);    /* slightly enlarged */
+  font-weight: bold;
+}
+.pin-btn.pinned::after {
+  content: " 📍";
+}
+
+
+

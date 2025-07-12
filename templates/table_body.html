@@ -1,5 +1,33 @@
+<!--{% for site in urls %}-->
+<!--<tr data-category="{{ site.category.lower() }}">-->
+<!--  <td>{{ site.name }}</td>-->
+<!--  <td>{{ site.category }}</td>-->
+<!--  <td><a href="{{ site.url }}" target="_blank">🔗 Visit</a></td>-->
+<!--  <td>-->
+<!--    <span class="badge {{ 'highlight' if site.update_count > 0 and not site.acknowledged else '' }}">-->
+<!--      {{ site.update_count }}-->
+<!--    </span>-->
+<!--    {% if site.update_count > 0 and not site.acknowledged %}-->
+<!--      <span class="new-badge">NEW</span>-->
+<!--    {% endif %}-->
+<!--  </td>-->
+<!--  <td>{{ "⏸️ Paused" if site.paused else "✅ Active" }}</td>-->
+<!--  <td>{{ site.last_checked if site.last_checked else '—' }}</td>-->
+<!--  <td>-->
+<!--    <a href="/acknowledge/{{ loop.index0 }}">✅</a>-->
+<!--    <a href="/pause/{{ loop.index0 }}">⏯️</a>-->
+<!--    <a href="/reset/{{ loop.index0 }}">♻️</a>-->
+<!--    <a href="/remove/{{ loop.index0 }}">🗑️</a>-->
+<!--    <button onclick="showHistory({{ loop.index0 }})">📜 View History</button>-->
+<!--  </td>-->
+<!--</tr>-->
+<!--{% endfor %}-->
+
 {% for site in urls %}
-<tr data-category="{{ site.category.lower() }}">
+<tr data-category="{{ site.category.lower() }}" data-index="{{ loop.index0 }}">
+  <td>
+    <button class="pin-btn" data-index="{{ loop.index0 }}" onclick="togglePin('{{ loop.index0 }}', this)">📌</button>
+  </td>
   <td>{{ site.name }}</td>
   <td>{{ site.category }}</td>
   <td><a href="{{ site.url }}" target="_blank">🔗 Visit</a></td>
@@ -22,3 +50,4 @@
   </td>
 </tr>
 {% endfor %}
+
